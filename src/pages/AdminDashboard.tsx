@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Clock, Users, Plus, Trash2, UserPlus, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Calendar, Clock, Users, Plus, Trash2, UserPlus, ChevronLeft, ChevronRight, X, History } from 'lucide-react';
 import type { Shift, ShiftType, User } from '@/types/database';
 import { SHIFT_INFO } from '@/types/database';
 
@@ -46,6 +46,9 @@ export default function AdminDashboard() {
   // Delete shift confirmation state
   const [deleteShiftDialogOpen, setDeleteShiftDialogOpen] = useState(false);
   const [shiftToDelete, setShiftToDelete] = useState<ShiftWithUser | null>(null);
+
+  // History tab state
+  const [historyWorkerId, setHistoryWorkerId] = useState<string>("all");
 
   useEffect(() => {
     fetchData();
@@ -268,12 +271,15 @@ export default function AdminDashboard() {
   return (
     <DashboardLayout title="Admin Panel">
       <Tabs defaultValue="calendar" className="space-y-4">
-        <TabsList className="w-full grid grid-cols-3">
+        <TabsList className="w-full grid grid-cols-4">
           <TabsTrigger value="calendar" className="text-xs sm:text-sm">
             Kalendar
           </TabsTrigger>
           <TabsTrigger value="hours" className="text-xs sm:text-sm">
             Sati
+          </TabsTrigger>
+          <TabsTrigger value="history" className="text-xs sm:text-sm">
+            Istorija
           </TabsTrigger>
           <TabsTrigger value="workers" className="text-xs sm:text-sm">
             Radnici
@@ -487,7 +493,6 @@ export default function AdminDashboard() {
               </div>
             </DialogContent>
           </Dialog>
-
         </TabsContent>
 
         {/* Hours tracking */}
@@ -525,6 +530,64 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Istorija rada po radnicima
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6">
+                <Label className="mb-2 block">Izaberite radnika</Label>
+                <Select value={historyWorkerId} onValueChange={setHistoryWorkerId}>
+                  <SelectTrigger className="w-full sm:w-[300px]">
+                    <SelectValue placeholder="Svi radnici" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Svi radnici</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tabela */}
+              <div className="border rounded-md">
+                {/* Header */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 p-3 bg-muted font-medium text-sm">
+                  <div>Datum</div>
+                  <div className="hidden sm:block">Dan</div>
+                  <div>Radnik</div>
+                  <div>Smena</div>
+                </div>
+                {/* Rows */}
+                {(() => {
+                  const filteredShifts = historyWorkerId === 'all'
+                    ? allShifts
+                    : allShifts.filter(s => s.user_id === historyWorkerId);
+
+                  if (filteredShifts.length === 0) {
+                    return <div className="p-8 text-center text-muted-foreground">Nema podataka</div>;
+                  }
+
+                  return filteredShifts.map(shift => (
+                    <div key={shift.id} className="grid grid-cols-3 sm:grid-cols-4 gap-4 p-3 border-t text-sm items-center hover:bg-muted/50 transition-colors">
+                      <div>{new Date(shift.date).toLocaleDateString('sr-Latn-RS')}</div>
+                      <div className="hidden sm:block text-muted-foreground">{new Date(shift.date).toLocaleDateString('sr-Latn-RS', { weekday: 'long' })}</div>
+                      <div className="font-medium">{shift.users?.name}</div>
+                      <div><ShiftBadge type={shift.shift_type as ShiftType} /></div>
+                    </div>
+                  ))
+                })()}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
