@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 
 const Index = () => {
-  const { user, dbUser, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -18,17 +18,9 @@ const Index = () => {
   }
 
   // Logged in - redirect based on role
-  if (dbUser) {
-    const redirectPath = dbUser.role === 'admin' ? '/dashboard/admin' : '/dashboard/worker';
-    return <Navigate to={redirectPath} replace />;
-  }
-
-  // Loading profile
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-muted-foreground">Učitavanje profila...</div>
-    </div>
-  );
+  // We use 'user' directly as it contains the role in our local store implementation
+  const redirectPath = user.role === 'admin' ? '/dashboard/admin' : '/dashboard/worker';
+  return <Navigate to={redirectPath} replace />;
 };
 
 export default Index;

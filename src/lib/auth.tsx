@@ -16,15 +16,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize users (creates admin if not exists)
-    store.getUsers();
+    try {
+      // Initialize users (creates admin if not exists)
+      store.getUsers();
 
-    // Check for existing session
-    const currentUser = store.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
+      // Check for existing session
+      const currentUser = store.getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+      }
+    } catch (error) {
+      console.error('Failed to initialize auth:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   async function signIn(username: string, password: string) {
