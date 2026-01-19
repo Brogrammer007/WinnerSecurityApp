@@ -107,7 +107,10 @@ export default function AdminDashboard() {
   }
 
   function formatDateKey(date: Date): string {
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   function getShiftsForDate(date: string): ShiftWithUser[] {
@@ -408,8 +411,8 @@ export default function AdminDashboard() {
                           <div
                             key={shift.id}
                             className={`text-[10px] px-1 py-0.5 rounded truncate ${shift.shift_type === '1' ? 'bg-blue-500/20 text-blue-400' :
-                                shift.shift_type === '2' ? 'bg-orange-500/20 text-orange-400' :
-                                  'bg-purple-500/20 text-purple-400'
+                              shift.shift_type === '2' ? 'bg-orange-500/20 text-orange-400' :
+                                'bg-purple-500/20 text-purple-400'
                               }`}
                             title={`${shift.users?.name} - ${SHIFT_INFO[shift.shift_type as ShiftType].label}`}
                           >
