@@ -267,3 +267,36 @@ export function clearAllData(): void {
   localStorage.removeItem(STORAGE_KEYS.ABSENCES);
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
 }
+
+// ========== BACKUP ==========
+
+export function exportAllData(): string {
+  const data = {
+    users: getUsersWithCredentials(),
+    shifts: getShifts(),
+    absences: getAbsences(),
+    timestamp: now(),
+    version: '1.0',
+  };
+  return JSON.stringify(data, null, 2);
+}
+
+export function importAllData(jsonData: string): boolean {
+  try {
+    const data = JSON.parse(jsonData);
+
+    // Basic validation
+    if (!data.users || !Array.isArray(data.users)) throw new Error('Invalid users data');
+    if (!data.shifts || !Array.isArray(data.shifts)) throw new Error('Invalid shifts data');
+
+    // Restore data
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(data.users));
+    localStorage.setItem(STORAGE_KEYS.SHIFTS, JSON.stringify(data.shifts));
+    localStorage.setItem(STORAGE_KEYS.ABSENCES, JSON.stringify(data.absences || []));
+
+    return true;
+  } catch (error) {
+    console.error('Import failed:', error);
+    throw error;
+  }
+}

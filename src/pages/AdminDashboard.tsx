@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Clock, Users, Plus, Trash2, UserPlus, ChevronLeft, ChevronRight, X, History } from 'lucide-react';
+import { Calendar, Clock, Users, Plus, Trash2, UserPlus, ChevronLeft, ChevronRight, X, History, Download, Upload, Settings } from 'lucide-react';
 import type { Shift, ShiftType, User } from '@/types/database';
 import { SHIFT_INFO } from '@/types/database';
 
@@ -154,7 +154,6 @@ export default function AdminDashboard() {
       });
       setNewShiftType('');
       setNewShiftUserId('');
-      // Don't close dialog, just refresh data so user can see added shift
       fetchData();
     } catch (error: any) {
       toast({
@@ -253,6 +252,59 @@ export default function AdminDashboard() {
     }
   }
 
+  // Backup handlers
+  function handleExportData() {
+    try {
+      const json = store.exportAllData();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `winner-security-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Uspešno',
+        description: 'Rezervna kopija je preuzeta',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Greška',
+        description: 'Neuspešno kreiranje kopije',
+      });
+    }
+  }
+
+  function handleImportData(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = event.target?.result as string;
+        store.importAllData(json);
+        toast({
+          title: 'Uspešno',
+          description: 'Podaci su učitani. Osvežavam...',
+        });
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Greška',
+          description: 'Neispravan fajl ili format podataka',
+        });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  }
+
   // Calculate hours per worker
   const hoursPerWorker = users.map((user) => {
     const approvedShifts = allShifts.filter(
@@ -271,7 +323,7 @@ export default function AdminDashboard() {
   return (
     <DashboardLayout title="Admin Panel">
       <Tabs defaultValue="calendar" className="space-y-4">
-        <TabsList className="w-full grid grid-cols-4">
+        <TabsList className="w-full grid grid-cols-5">
           <TabsTrigger value="calendar" className="text-xs sm:text-sm">
             Kalendar
           </TabsTrigger>
@@ -284,6 +336,9 @@ export default function AdminDashboard() {
           <TabsTrigger value="workers" className="text-xs sm:text-sm">
             Radnici
           </TabsTrigger>
+          <TabsTrigger value="system" className="text-xs sm:text-sm">
+            Sistem
+          </TabsTrigger>
         </TabsList>
 
         {/* Calendar view */}
@@ -291,7 +346,7 @@ export default function AdminDashboard() {
           {users.length === 0 && (
             <Card>
               <CardContent className="py-4 text-center text-muted-foreground">
-                Prvo dodajte radnike u tabu "Radnici"
+                Prvo dodajte radnike u tabu "Radnici" ili učitajte backup u tabu "Sistem"
               </CardContent>
             </Card>
           )}
@@ -319,7 +374,6 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              {/* Week days header */}
               <div className="grid grid-cols-7 gap-1 mb-1">
                 {weekDays.map((day) => (
                   <div key={day} className="text-center text-xs font-medium text-muted-foreground py-2">
@@ -328,7 +382,6 @@ export default function AdminDashboard() {
                 ))}
               </div>
 
-              {/* Calendar grid */}
               <div className="grid grid-cols-7 gap-1">
                 {calendarDays.map((date, index) => {
                   const dateKey = formatDateKey(date);
@@ -369,7 +422,6 @@ export default function AdminDashboard() {
                 })}
               </div>
 
-              {/* Legend */}
               <div className="flex gap-4 mt-4 justify-center text-xs">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded bg-blue-500/20"></div>
@@ -387,7 +439,6 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Add/Manage Shift Dialog */}
           <Dialog open={shiftDialogOpen} onOpenChange={setShiftDialogOpen}>
             <DialogContent className="max-w-md">
               <DialogHeader>
@@ -400,7 +451,6 @@ export default function AdminDashboard() {
                 </DialogTitle>
               </DialogHeader>
 
-              {/* List of existing shifts for the day */}
               {selectedDateShifts.length > 0 && (
                 <div className="mb-4 space-y-2">
                   <Label>Zakazane smene</Label>
@@ -425,7 +475,6 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {/* Add new shift form */}
               <form onSubmit={handleAddShift} className="space-y-4">
                 <Label>Dodaj novu smenu</Label>
                 <div className="grid grid-cols-2 gap-4">
@@ -474,7 +523,6 @@ export default function AdminDashboard() {
             </DialogContent>
           </Dialog>
 
-          {/* Delete shift confirmation */}
           <Dialog open={deleteShiftDialogOpen} onOpenChange={setDeleteShiftDialogOpen}>
             <DialogContent>
               <DialogHeader>
@@ -685,6 +733,63 @@ export default function AdminDashboard() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* System / Backup Tab */}
+        <TabsContent value="system" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Sistemska podešavanja
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg bg-muted/20 gap-4">
+                  <div className="space-y-1">
+                    <h3 className="font-medium flex items-center gap-2">
+                      <Download className="h-4 w-4 text-green-500" />
+                      Rezervna kopija (Export)
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Sačuvajte sve podatke (radnike, smene) u fajl na vašem uređaju.
+                      Preporučuje se da ovo radite redovno.
+                    </p>
+                  </div>
+                  <Button onClick={handleExportData} className="w-full sm:w-auto">
+                    Preuzmi podatke
+                  </Button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg bg-muted/20 gap-4">
+                  <div className="space-y-1">
+                    <h3 className="font-medium flex items-center gap-2">
+                      <Upload className="h-4 w-4 text-blue-500" />
+                      Učitavanje podataka (Import)
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Vratite podatke iz rezervne kopije.
+                      <strong className="block text-destructive mt-1">Pažnja: Ovo će obrisati trenutne podatke i zameniti ih onima iz fajla!</strong>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <input
+                      type="file"
+                      id="import-file"
+                      className="hidden"
+                      accept=".json"
+                      onChange={handleImportData}
+                    />
+                    <Button variant="outline" className="w-full" onClick={() => document.getElementById('import-file')?.click()}>
+                      Izaberi fajl i učitaj
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </DashboardLayout>
